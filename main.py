@@ -34,6 +34,47 @@ time_to_run = datetime.time(hour=12, minute=0, tzinfo=kst)
 async def 안녕(ctx):
     await ctx.send(f'{ctx.author.mention}님, 안녕하세요! 반가워요 👋')
 
+@bot.command()
+async def 랜덤역할(ctx):
+    if ctx.author.id != ctx.guild.owner_id:
+        await ctx.send("이 명령어는 **서버 방장**만 사용할 수 있습니다.")
+        return
+    
+    await ctx.send("모든 멤버의 역할 랜덤 변경을 시작합니다...")
+
+    guild = ctx.guild
+    assignable_roles = [role for role in guild.roles if role.name in RANDOM_ROLES]
+
+    if not assignable_roles:
+        await ctx.send(f"서버에 설정된 역할({', '.join(RANDOM_ROLES)})이 하나도 없습니다.")
+        return
+    
+    count = 0
+
+    for member in guild.members:
+        if member.bot:
+            continue
+
+        if member.id == guild.owner_id:
+            continue
+
+        try:
+            roles_to_remove = [role for role in member.roles if role.name in RANDOM_ROLES]
+            if roles_to_remove:
+                await member.remove_roles(*roles_to_remove, reason="랜덤 역할 초기화")
+
+            new_role = random.choice(assignable_roles)
+            await member.add_roles(new_role, reason="랜덤 역할 부여")
+
+            count += 1
+            await asyncio.sleep(1) # API 제한 방지 (1초 대기)
+        except discord.Forbidden:
+            print(f"권한 부족: {member.display_name}님을 건드릴 수 없습니다.")
+        except Exception as e:
+            print(f"오류 발생 ({member.display_name}): {e}")
+
+    await ctx.send(f"작업 완료! 총 **{count}명**의 역할이 변경되었습니다.")
+
 @tasks.loop(time=time_to_run)
 async def assign_random_role():
     if datetime.datetime.now(kst).weekday() != 0:
