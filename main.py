@@ -28,7 +28,7 @@ async def on_ready():
 
 utc = datetime.timezone.utc
 kst = datetime.timezone(datetime.timedelta(hours=9))
-time_to_run = datetime.time(hour=12, minute=0, tzinfo=kst)
+periodic_time = datetime.time(hour=12, minute=0, tzinfo=kst)
 
 @bot.command()
 async def 안녕(ctx):
@@ -40,30 +40,28 @@ async def 랜덤역할(ctx):
         await ctx.send("이 명령어는 **서버 방장**만 사용할 수 있습니다.")
         return
     
-    await ctx.send("모든 멤버의 역할 랜덤 변경을 시작합니다...")
+    target_members = [m for m in ctx.guild.members if not m.bot and m.id != ctx.guild.owner_id]
 
-    guild = ctx.guild
-    assignable_roles = [role for role in guild.roles if role.name in RANDOM_ROLES]
+    assignable_roles = [role for role in ctx.guild.roles if role.name in RANDOM_ROLES]
 
-    if not assignable_roles:
-        await ctx.send(f"서버에 설정된 역할({', '.join(RANDOM_ROLES)})이 하나도 없습니다.")
+    if len(target_members) > len(assignable_roles):
+        await ctx.send(
+            f"**오류 발생**\n"
+            f"사람은 **{len(target_members)}명**인데, 준비된 역할은 **{len(assignable_roles)}개**입니다.\n"
+            f"역할을 더 만들어주세요!!"
+        )
         return
     
+    await ctx.send("모든 멤버의 역할 랜덤 변경을 시작합니다...")
+    random.shuffle(assignable_roles)    
     count = 0
 
-    for member in guild.members:
-        if member.bot:
-            continue
-
-        if member.id == guild.owner_id:
-            continue
-
+    for member, new_role in zip(target_members, assignable_roles):
         try:
-            roles_to_remove = [role for role in member.roles if role.name in RANDOM_ROLES]
+            roles_to_remove = [r for r in member.roles if r.name in RANDOM_ROLES]
             if roles_to_remove:
                 await member.remove_roles(*roles_to_remove, reason="랜덤 역할 초기화")
 
-            new_role = random.choice(assignable_roles)
             await member.add_roles(new_role, reason="랜덤 역할 부여")
 
             count += 1
@@ -75,34 +73,35 @@ async def 랜덤역할(ctx):
 
     await ctx.send(f"작업 완료! 총 **{count}명**의 역할이 변경되었습니다.")
 
-@tasks.loop(time=time_to_run)
+@tasks.loop(time=periodic_time)
 async def assign_random_role():
     if datetime.datetime.now(kst).weekday() != 0:
+        print("오늘은 월요일이 아닙니다.")
         return
+
+    print("월요일 12시! 역할 섞기를 시작합니다.")
 
     guild = bot.get_guild(TARGET_GUILD_ID)
     if guild is None:
+        print("오류: 서버 ID를 찾을수 없습니다. TARGET_GUILD_ID를 확인해주세요!!!")
         return
     
+    target_members = [m for m in guild.members if not m.bot and m.id != guild.owner_id]
     assignable_roles = [role for role in guild.roles if role.name in RANDOM_ROLES]
 
-    if not assignable_roles:
-        print("부여할수 있는 역할이 서버에 존재하지 않습니다. `RANDOM_ROLES`를 확인해주세요.")
+    if len(target_members) > len(assignable_roles):
+        print("역할의 개수가 부족합니다.")
         return
     
-    for member in guild.members:
-        if member.bot:
-            continue
-        
-        if member.id == guild.owner_id:
-            continue
+    random.shuffle(assignable_roles)
+    print(f"총 {len(target_members)}명에게 역할을 배분합니다...")
 
+    for member, new_role in zip(target_members):
         try:
-            roles_to_remove = [role for role in member.roles if role.name in RANDOM_ROLES]
+            roles_to_remove = [r for r in member.roles if r.name in RANDOM_ROLES]
             if roles_to_remove:
                 await member.remove_roles(*roles_to_remove, reason="주간 랜덤 역할 초기화")
 
-            new_role = random.choice(assignable_roles)
             await member.add_roles(new_role, reason="주간 랜덤 역할 부여")
             print(f"{member.display_name} -> {new_role.name} 부여 완료")
 
@@ -112,6 +111,6 @@ async def assign_random_role():
         except Exception as e:
             print(f"오류 발생 ({member.display_name}): {e}")
 
-    print("모든 멤버의 역할 변경이 완료되었습니다.")
+    print("이번주 모든 멤버의 역할 변경이 완료되었습니다.")
 
 bot.run(token)
