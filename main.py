@@ -32,25 +32,53 @@ periodic_time = datetime.time(hour=12, minute=0, tzinfo=kst)
 
 @bot.command()
 async def 안녕(ctx):
-    await ctx.send(f'{ctx.author.mention}님, 안녕하세요! 반가워요 👋')
+    embed = discord.Embed(
+        title="👋 안녕하세요!",
+        description=f"반가워요, {ctx.author.mention}님!\n오늘도 즐거운 하루 보내세요.",
+        color=discord.Color.gold()
+    )
+    embed.set_thumbnail(url=ctx.author.display_avatar.url)
+    embed.set_footer(text=f"{bot.user.name} 드림", icon_url=bot.user.display_avatar.url)
+    await ctx.send(embed=embed)
 
 @bot.command()
 async def 북(ctx):
-    await ctx.send("딱")
+    embed = discord.Embed(
+        title="북",
+        description="딱"
+    )
+    color=discord.Color.random()
+    await ctx.send(embed=embed)
 
 @bot.command()
 async def 딱(ctx):
-    await ctx.send("이야 기분좋다")
+    embed = discord.Embed(
+        title="제가 딱 한마디만 하겠습니다",
+        description="이야 기분좋다"
+    )
+    color=discord.Color.random()
+    await ctx.send(embed=embed)
 
 @bot.command()
 async def 노무(ctx):
+    embed = discord.Embed(
+        title="프로필사진",
+        description=f"예아, {ctx.author.mention}님이 닉네임을 변경했노"
+    )
+    color=discord.Color.random()
+    await ctx.send(embed=embed)
     await ctx.author.edit(nick="노무현")
 
 
 @bot.command()
 async def 랜덤역할(ctx):
     if ctx.author.id != ctx.guild.owner_id:
-        await ctx.send("이 명령어는 **서버 방장**만 사용할 수 있습니다.")
+        embed = discord.Embed(
+            title="🚫 접근 거부",
+            description="이 명령어는 **서버 방장**만 사용할 수 있습니다.",
+            color=0xff0000 # 빨간색
+        )
+        await ctx.send(embed=embed)
         return
     
     target_members = [m for m in ctx.guild.members if not m.bot and m.id != ctx.guild.owner_id]
@@ -58,14 +86,21 @@ async def 랜덤역할(ctx):
     assignable_roles = [role for role in ctx.guild.roles if role.name in RANDOM_ROLES]
 
     if len(target_members) > len(assignable_roles):
-        await ctx.send(
-            f"**오류 발생**\n"
-            f"사람은 **{len(target_members)}명**인데, 준비된 역할은 **{len(assignable_roles)}개**입니다.\n"
-            f"역할을 더 만들어주세요!!"
+        embed = discord.Embed(
+            title="❌ 개수 부족 오류",
+            description=f"사람은 {len(target_members)}명인데 역할은 {len(assignable_roles)}개뿐입니다.",
+            color=0xff0000
         )
+        await ctx.send(embed=embed)
         return
     
-    await ctx.send("모든 멤버의 역할 랜덤 변경을 시작합니다...")
+    loading_embed = discord.Embed(
+        title="🔄 작업 시작",
+        description=f"총 **{len(target_members)}명**의 역할을 섞고 닉네임을 변경합니다...",
+        color=0x0000ff # 파란색
+    )
+    
+    await ctx.send(embed=loading_embed)
     random.shuffle(assignable_roles)    
     count = 0
 
@@ -83,8 +118,14 @@ async def 랜덤역할(ctx):
             print(f"권한 부족: {member.display_name}님을 건드릴 수 없습니다.")
         except Exception as e:
             print(f"오류 발생 ({member.display_name}): {e}")
-
-    await ctx.send(f"작업 완료! 총 **{count}명**의 역할이 변경되었습니다.")
+    
+    success_embed = discord.Embed(
+        title="✅ 작업 완료!",
+        description=f"총 **{count}명**의 역할과 닉네임 변경을 마쳤습니다.",
+        color=0x00ff00 # 초록색
+    )
+    success_embed.set_footer(text="봇이 자동으로 수행함")
+    await ctx.send(embed=success_embed)
 
 @tasks.loop(time=periodic_time)
 async def assign_random_role():
