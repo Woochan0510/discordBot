@@ -35,6 +35,19 @@ async def 안녕(ctx):
     await ctx.send(f'{ctx.author.mention}님, 안녕하세요! 반가워요 👋')
 
 @bot.command()
+async def 북(ctx):
+    await ctx.send("딱")
+
+@bot.command()
+async def 딱(ctx):
+    await ctx.send("이야 기분좋다")
+
+@bot.command()
+async def 노무(ctx):
+    await ctx.author.edit(nick="노무현")
+
+
+@bot.command()
 async def 랜덤역할(ctx):
     if ctx.author.id != ctx.guild.owner_id:
         await ctx.send("이 명령어는 **서버 방장**만 사용할 수 있습니다.")
